@@ -25,3 +25,5 @@ Differente option sont disponible directement dans le script
 -- => ouverture / fermeture automatiser de tous les volets selon la valeur de cette commande
 -- Opt. 7. Commande presence
 -- => si presence detecté ouverture le matin des volets indiquer presence=true si non pas d'ouveture quelque soit le mode
+
+il faudra penser à ajouter aussi le script pour l'orientation du soleil afin que le mode canicule puisse correctement fonctioner 
