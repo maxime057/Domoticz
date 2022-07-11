@@ -3,11 +3,8 @@ si vous avez des idée d’amélioration hésiter surtout pas il y en a plus dan
 
 
 il faudra créé un bouton multiple "Mode volets" avec comme valeur</br>
-nuveau / nom</br>
-0 / manuel</br>
-10 / normal</br>
-20 / tardif</br>
-30 / canicule</br>
+<img width="359" alt="Bonton mode volet" src="https://user-images.githubusercontent.com/40360509/178256847-f871e2e6-a3a9-449b-8586-b93794f38bc5.png">
+<img width="1053" alt="Config bouton mode volet" src="https://user-images.githubusercontent.com/40360509/178256875-dc24e063-bf7b-4773-8356-55bb8f441a0f.png">
 </br>
 </br>
 Differente option sont disponible directement dans le script</br>
@@ -28,5 +25,4 @@ Differente option sont disponible directement dans le script</br>
 </br>
 il faudra penser à ajouter aussi le script sunAzimuth.lua qui ce trouve dans le dossier DZvents pour calucler l'orientation du soleil afin que le mode canicule puisse correctement fonctioner </br>
 </br>
-<img width="359" alt="Bonton mode volet" src="https://user-images.githubusercontent.com/40360509/178256847-f871e2e6-a3a9-449b-8586-b93794f38bc5.png">
-<img width="1053" alt="Config bouton mode volet" src="https://user-images.githubusercontent.com/40360509/178256875-dc24e063-bf7b-4773-8356-55bb8f441a0f.png">
+
