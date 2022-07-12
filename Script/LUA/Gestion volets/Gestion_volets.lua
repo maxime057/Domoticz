@@ -480,12 +480,23 @@ if (script_actif == true) then
                         commandArray[v.volet]=ordre_type(v.Type, "closing")
                         commandArray[v.volet]=ordre_type(v.Type, "stop", v.times)
                     end
-                elseif elevation_sun >= 30 then
-                    voir_les_logs ('--- --- --- Commande Ouverture azimut soleil',debugging)
-                    if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' )  and TimeDiff(v.volet) > delai_on_off then
-                        voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être partielement fermé',debugging)
-                        voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
-                        commandArray[v.volet]=ordre_type(v.Type, "opening")
+                elseif elevation_sun >= 10 then
+                    if (v.presence == false) then
+                        voir_les_logs ('--- --- --- Commande Ouverture azimut soleil',debugging)
+                        if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
+                            voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être partielement fermé',debugging)
+                            voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
+                            commandArray[v.volet]=ordre_type(v.Type, "opening")
+                        end
+                    else
+                        if otherdevices_svalues[device_presence]==value_presence then
+                            voir_les_logs ('--- --- --- Commande Ouverture azimut soleil',debugging)
+                            if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
+                                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être partielement fermé',debugging)
+                                voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
+                                commandArray[v.volet]=ordre_type(v.Type, "opening")
+                            end
+                        end
                     end
                 end
             end
