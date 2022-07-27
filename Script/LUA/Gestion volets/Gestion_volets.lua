@@ -1,7 +1,7 @@
 --[[
 name : Genstion_vollets.lua
 auteur : Max-MT007
-Date de mise à jour : 22/07/2022
+Date de mise à jour : 27/07/2022
 date de création : 29/03/2022
 Principe : permet d'automatiser la gestion des volets roulants 
 en fonction de l'heure de levé et couché du soleil, Temperature, pluie, alarme
@@ -85,27 +85,28 @@ local les_volets = {};
 -- type de pieces : chambre, principale, service, eau
 -- exemple pièces principale (salon, salle à manger, salle de jeux, bureau), eau (cuisine, salle de bain), de service (couloir, toilettes, hall, etc.)
 -- Possibilité d'ajouter des équipements en relation, comme température piece, etat ouverture fenetre, etc (séparé par une  virgule)
--- exemple principale les_volets[#les_volets+1] = {execution=nil, volet="Salon sur Jardin", piece="principale" Type="Somfy", absent=false, pieces="principale", azimut=285, times=10}
+-- exemple principale les_volets[#les_volets+1] = {volet="Salon sur Jardin", piece="principale" Type="Somfy", absent=false, pieces="principale", azimut=285, times=10}
 -- option aditionel : temperature="Temperature Salon" / fenetre="Fenetre Salon sur Jardin" / alarme=true
+
 -- 1ere volet : nom du device volet 1
-les_volets[#les_volets+1] = {execution="", volet="Volet salon 1", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salon 1", pluie=true, azimut=90, times=8.5, alarme=false} 
+les_volets[#les_volets+1] = {volet="Volet salon 1", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salon 1", porte=false, pluie=true, azimut=90, times=8.5, alarme=false} 
 -- 2eme volet : nom du device volet 2 
-les_volets[#les_volets+1] = {execution="", volet="Volet salon 2", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salon 2", pluie=true, azimut=90, times=8.5, alarme=false} 
+les_volets[#les_volets+1] = {volet="Volet salon 2", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salon 2", porte=false, pluie=true, azimut=90, times=8.5, alarme=false} 
 -- 3eme volet : nom du device volet 3
-les_volets[#les_volets+1] = {execution="", volet="Volet salle a manger", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salle a manger", pluie=true, azimut=180, times=13, alarme=false}
+les_volets[#les_volets+1] = {volet="Volet salle a manger", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salle a manger", porte=false, pluie=true, azimut=180, times=13, alarme=false}
 -- 4eme volet : nom du device volet 4 
-les_volets[#les_volets+1] = {execution="", volet="Volet terrasse", piece="eau", Type="somfy", presence=true, fenetre="Porte terrasse", porte=true, pluie=false, alarme=true}
+les_volets[#les_volets+1] = {volet="Volet terrasse", piece="eau", Type="somfy", presence=true, fenetre="Porte terrasse", porte=true, pluie=false, alarme=true}
 -- 5eme volet : nom du device volet 5 
-les_volets[#les_volets+1] = {execution="", volet="Volet chambre", piece="chambre", Type="somfy", presence=false, fenetre="Fenetre chambre", pluie=true, azimut=90, times=15, alarme=false, h_ouvertur=450, temperature="Chambre"}
+les_volets[#les_volets+1] = {volet="Volet chambre", piece="chambre", Type="somfy", presence=false, fenetre="Fenetre chambre", porte=false, pluie=true, azimut=90, times=15, alarme=false, h_ouvertur=450, temperature="Chambre"}
 -- 6eme volet : nom du device volet 6 
-les_volets[#les_volets+1] = {execution="", volet="Volet bureau", piece="principale", Type="somfy", presence=true, fenetre="Fenetre bureau", pluie=true, azimut=270, times=10, alarme=true}
+les_volets[#les_volets+1] = {volet="Volet bureau", piece="principale", Type="somfy", presence=true, fenetre="Fenetre bureau", porte=false, pluie=true, azimut=270, times=10, alarme=true}
 
 --------------------------------------------
 ----------- Fin variables à éditer ---------
 --------------------------------------------
 
 local nom_script = 'Gestion volets'
-local version = '2.5.3'
+local version = '2.5.3.C03'
 local heures = 0
 local minutes = 0
 local secondes = 0
@@ -177,7 +178,7 @@ function ordre_type(type_volet, ordre, attente, types)
                 return 'Off'
             end
         else
-            return ordre..' AFTER 1 SECONDS'
+            return ordre..' AFTER 2 SECONDS'
         end
     else
         if ordre == "opening" then
@@ -378,7 +379,7 @@ if (script_actif == true) then
                             voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                             commandArray[v.volet]=ordre_type(v.Type, "opening")
                         elseif (v.presence == true) then
-                            if (otherdevices_svalues[device_presence] == value_presence) then
+                            if (otherdevices[device_presence] == value_presence) then
                                 voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
                                 voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                                 commandArray[v.volet]=ordre_type(v.Type, "opening")
@@ -393,7 +394,7 @@ if (script_actif == true) then
                 ----------------------------------------------------------------------------------------
                 -- FERMETURE VOLETS des pieces principales / eau / service APRES LE COUCHER DU SOLEIL --
                 ----------------------------------------------------------------------------------------
-                if ((sunset+delai_apres_couche_soleil) == timeInMinutes and (v.piece=="principale" or v.piece=="eau" or v.piece=="service") and (v.porte==false or v.porte==nil)) then
+                if ((sunset+delai_apres_couche_soleil) == timeInMinutes and (v.piece=="principale" or v.piece=="eau" or v.piece=="service") and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil',debugging)
                     if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -409,7 +410,7 @@ if (script_actif == true) then
                 ------------------------------------------------------------------------------------------------------
                 -- FERMETURE complète de tous les volets APRES LE COUCHER DU SOLEIL et delais sus OU opt cmd closed --
                 ------------------------------------------------------------------------------------------------------
-                if ((sunset+delai_apres_couche_soleil+delai_closed_apres_couche_soleil) == now) then
+                if ((sunset+delai_apres_couche_soleil+delai_closed_apres_couche_soleil) == now and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil + delais suplementaire',debugging)
                     if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -436,7 +437,7 @@ if (script_actif == true) then
                             voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                             commandArray[v.volet]=ordre_type(v.Type, "opening")
                         elseif (v.presence == true) then
-                            if (otherdevices_svalues[device_presence] == value_presence) then
+                            if (otherdevices[device_presence] == value_presence) then
                                 voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
                                 voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                                 commandArray[v.volet]=ordre_type(v.Type, "opening")
@@ -451,7 +452,7 @@ if (script_actif == true) then
                 ----------------------------------------------------------------------------------------
                 -- FERMETURE VOLETS des pieces principales / eau / service APRES LE COUCHER DU SOLEIL --
                 ----------------------------------------------------------------------------------------
-                if ((sunset+delai_apres_couche_soleil+delai_sus_tarif) == now and (v.piece=="principale" or v.piece=="eau" or v.piece=="service") and (v.porte==false or v.porte==nil)) then
+                if ((sunset+delai_apres_couche_soleil+delai_sus_tarif) == now and (v.piece=="principale" or v.piece=="eau" or v.piece=="service") and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil',debugging)
                     if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -467,7 +468,7 @@ if (script_actif == true) then
                 ------------------------------------------------------------------------------------
                 -- FERMETURE complète de tous les volets APRES LE COUCHER DU SOLEIL et delais sus --
                 ------------------------------------------------------------------------------------
-                if ((sunset+delai_apres_couche_soleil+delai_closed_apres_couche_soleil+delai_sus_tarif) == now) then
+                if ((sunset+delai_apres_couche_soleil+delai_closed_apres_couche_soleil+delai_sus_tarif) == now and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil + delais suplementaire',debugging)
                     if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -501,12 +502,8 @@ if (script_actif == true) then
                 if (now == sunrise-delai_avant_leve_soleil and (v.piece=="principale" or v.piece=="eau" or v.piece=="service")) then
                     voir_les_logs('--- --- --- Aux le levé du soleil',debugging)
                     if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
-                        if (v.presence == false or v.presence == nil) then
-                            voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
-                            voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
-                            commandArray[v.volet]=ordre_type(v.Type, "opening")
-                        elseif (v.presence == true) then
-                            if (otherdevices_svalues[device_presence] == value_presence) then
+                        if v.presence == true then
+                            if (otherdevices[device_presence] == value_presence) then
                                 voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
                                 voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                                 commandArray[v.volet]=ordre_type(v.Type, "opening")
@@ -514,6 +511,10 @@ if (script_actif == true) then
                                 voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
                                 voir_les_logs ('--- --- --- Le volet ne peux pas etre ouvert car pas de presence detecter',debugging)
                             end
+                        else
+                            voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être fermé',debugging)
+                            voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
+                            commandArray[v.volet]=ordre_type(v.Type, "opening")
                         end
                     end
                 end
@@ -540,7 +541,7 @@ if (script_actif == true) then
                                 commandArray[v.volet]=ordre_type(v.Type, "opening")
                             end
                         elseif (v.presence == true) then
-                            if otherdevices_svalues[device_presence]==value_presence then
+                            if otherdevices[device_presence]==value_presence then
                                 voir_les_logs ('--- --- --- Commande Ouverture azimut soleil',debugging)
                                 if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                                     voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être partielement fermé',debugging)
