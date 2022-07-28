@@ -223,8 +223,8 @@ if (script_actif == true) then
     voir_les_logs("========= ".. nom_script .." (v".. version ..") =========",debugging)
     time=os.time()
     now = tonumber(os.date('%H')*60 + os.date('%M'))
-    sunrise = tonumber(timeofday['SunriseInMinutes'])
-    sunset = tonumber(timeofday['SunsetInMinutes'])
+    sunrise = tonumber(timeofday['SunriseInMinutes']) -- lever du soleil
+    sunset = tonumber(timeofday['SunsetInMinutes']) -- coucher du soleil
     mode_volets = otherdevices[mode_volets]
     azimute_sun = tonumber(otherdevices[azimute_sun])
     elevation_sun = tonumber(otherdevices[elevation_sun])
@@ -314,16 +314,8 @@ if (script_actif == true) then
         --------------------------------------------------------
         -- FERMETURE des volets chambres COMMANDE automatique --
         --------------------------------------------------------
-        if (now == sunrise-30 and v.piece=="chambre" and otherdevices[v.fenetre]=="Closed") then
-            voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
-            if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
-                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
-                voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                commandArray[v.volet]=ordre_type(v.Type, "closing")
-            end
-        end
-        if devicechanged[v.fenetre] then
-            if (now >= sunrise-30 or now <= v.h_ouvertur) and v.piece=="chambre" and otherdevices[v.fenetre]=="Closed" then
+        if v.piece=="chambre" then
+            if (now == sunrise-30 and otherdevices[v.fenetre]=="Closed") then
                 voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
                 if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
                     voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -331,8 +323,30 @@ if (script_actif == true) then
                     commandArray[v.volet]=ordre_type(v.Type, "closing")
                 end
             end
-        end
+            if devicechanged[v.fenetre] then
+                if (now >= sunset-30 or now <= sunrise-delai_avant_leve_soleil-10) and otherdevices[v.fenetre]=="Closed" then
+                    voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
+                    if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
+                        voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                        voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
+                        commandArray[v.volet]=ordre_type(v.Type, "closing")
+                    end
+                end
+            end
+        end 
         
+        ------------------------------------------------------------
+        -- FERMETURE VOLETS des chambres AVANT LE LEVER DU SOLEIL --
+        ------------------------------------------------------------
+        if (sunrise-delai_avant_leve_soleil == now and v.piece=="chambre") then
+            voir_les_logs('--- --- --- Avant le levé du soleil',debugging)
+            if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )    and TimeDiff(v.volet) > delai_on_off then
+                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
+                commandArray[v.volet]=ordre_type(v.Type, "closing")
+            end
+        end
+            
         --------------------------------------------------------
         -- FERMETURE des volets COMMANDE automatique si PLUIE --
         --------------------------------------------------------
@@ -493,18 +507,6 @@ if (script_actif == true) then
             --------------------------------------------------------------------------------------
             --------------------------------------------------------------------------------------  
             elseif mode_volets == "Canicule" then
-                
-                ------------------------------------------------------------
-                -- FERMETURE VOLETS des chambres AVANT LE LEVER DU SOLEIL --
-                ------------------------------------------------------------
-                if (sunrise-delai_avant_leve_soleil == now and v.piece=="chambre") then
-                    voir_les_logs('--- --- --- Avant le levé du soleil',debugging)
-                    if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )    and TimeDiff(v.volet) > delai_on_off then
-                        voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
-                        voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                        commandArray[v.volet]=ordre_type(v.Type, "closing")
-                    end
-                end
                  
                 --------------------------------------------------------------------------------------
                 -- OUVERTURE VOLETS des pieces principales / eau / service AVANT LE LEVER DU SOLEIL --
