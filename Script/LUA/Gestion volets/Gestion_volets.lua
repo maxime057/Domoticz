@@ -60,7 +60,8 @@ local delai_apres_couche_soleil = tonumber(30)          -- délai en minutes pou
 local delai_closed_apres_couche_soleil = tonumber(90)   -- délai en minutes pour la fermeture complète des volets après couché du soleil
 local delai_on_off = tonumber(10)                       -- délai minimum en minutes pour la réouverture des volets après fermeture
 local min_volet_matin_hh = tonumber(7)                  -- heure minimum pour que les volets souvre la matin
-local min_volet_matin_mm = tonumber(30)                        
+local min_volet_matin_mm = tonumber(30)                 
+local temp_min_fermeture = 15                           -- temperature min en dessus de laquelle les volets des chambre ce faire la nuit si la fenetre est ouverte 
 local azimute_sun = 'Azimut du soleil'                  -- variable qui donne l'orientation du soleil par rapport au nord 
 local elevation_sun = 'Altitude du soleil'              -- variable qui donne l'levation du soleil dans le ciel
 
@@ -106,7 +107,7 @@ les_volets[#les_volets+1] = {volet="Volet bureau", piece="principale", Type="som
 --------------------------------------------
 
 local nom_script = 'Gestion volets'
-local version = '2.7'
+local version = '2.7.1'
 local heures = 0
 local minutes = 0
 local secondes = 0
@@ -375,7 +376,7 @@ if (script_actif == true) then
                     end
                 end
             end
-            if (now > sunset or now < sunrise) and otherdevices_temperature[sonde_ext] <= 13.5 then
+            if (now > sunset or now < sunrise) and otherdevices_temperature[sonde_ext] <= temp_min_fermeture then
                 voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
                 if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
                     voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
