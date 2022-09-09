@@ -1,7 +1,7 @@
 --[[
 name : Genstion_vollets.lua
 auteur : Max-MT007
-Date de mise à jour : 28/07/2022
+Date de mise à jour : 09/09/2022
 date de création : 29/03/2022
 Principe : permet d'automatiser la gestion des volets roulants 
 en fonction de l'heure de levé et couché du soleil, Temperature, pluie, alarme
@@ -45,7 +45,7 @@ en fonction de l'heure de levé et couché du soleil, Temperature, pluie, alarme
 ------------ Variables à éditer ------------
 -------------------------------------------- 
 
-local ip = '127.0.0.1:8080'                             -- user:pass@ip:port de domoticz
+local url = '127.0.0.1:8080'                            -- user:pass@ip:port de domoticz
 local debugging = false                                 -- true pour voir les logs dans la console log Dz ou false pour ne pas les voir
 local script_actif = true                               -- active (true) ou désactive (false) ce script simplement
 local sonde_ext = 'Exterieur'                           -- nom de la sonde de température extérieure
@@ -95,7 +95,7 @@ les_volets[#les_volets+1] = {volet="Volet salon 2", piece="principale", Type="so
 -- 3eme volet : nom du device volet 3
 les_volets[#les_volets+1] = {volet="Volet salle a manger", piece="principale", Type="somfy", presence=false, fenetre="Fenetre salle a manger", porte=false, pluie=true, azimut=180, times=13, alarme=false}
 -- 4eme volet : nom du device volet 4 
-les_volets[#les_volets+1] = {volet="Volet terrasse", piece="eau", Type="somfy", presence=true, fenetre="Porte terrasse", porte=true, pluie=false, alarme=true}
+les_volets[#les_volets+1] = {volet="Volet terrasse", piece="eau", Type="somfy", presence=true, fenetre="Porte cuisine", porte=true, pluie=false, alarme=true}
 -- 5eme volet : nom du device volet 5 
 les_volets[#les_volets+1] = {volet="Volet chambre", piece="chambre", Type="somfy", presence=false, fenetre="Fenetre chambre", porte=false, pluie=true, azimut=90, times=15, alarme=false, h_ouvertur=450, temperature="Chambre"}
 -- 6eme volet : nom du device volet 6 
@@ -106,7 +106,7 @@ les_volets[#les_volets+1] = {volet="Volet bureau", piece="principale", Type="som
 --------------------------------------------
 
 local nom_script = 'Gestion volets'
-local version = '2.5.4'
+local version = '2.7'
 local heures = 0
 local minutes = 0
 local secondes = 0
@@ -116,6 +116,8 @@ local now = 0
 local min_volet_matin = min_volet_matin_hh*60 + min_volet_matin_mm
 delai_on_off = delai_on_off*60
 
+local variables_user = {}
+variables_user[#variables_user+1] = "alerte_pluie"
 
 --------------------------------------------
 ---------------- Fonctions -----------------
@@ -209,6 +211,17 @@ end
 
 --------------------------------------------
 
+------ encode la chaine str pour la passer dans une url 
+function url_encode(str) 
+   if (str) then
+   str = string.gsub (str, "\n", "\r\n")
+   str = string.gsub (str, "([^%w ])",
+   function (c) return string.format ("%%%02X", string.byte(c)) end)
+   str = string.gsub (str, " ", "+")
+   end
+   return str
+end
+
 --------------------------------------------
 -------------- Fin Fonctions ---------------
 --------------------------------------------
@@ -230,7 +243,12 @@ if (script_actif == true) then
     elevation_sun = tonumber(otherdevices[elevation_sun])
     alerte_pluie = false 
     --= otherdevices_svalues['']
-    
+    for k,var_use in pairs(variables_user) do
+        if(uservariables[var_use] == nil) then -- Création de la variable  car elle n'existe pas
+            voir_les_logs("--- --- --- La Variable " .. var_use .." n'existe pas --- --- --- ",debugging)
+            commandArray['OpenURL'] = url..'/json.htm?type=command&param=adduservariable&vname='..url_encode(var_use)..'&vtype=2&vvalue='
+        end
+    end
     timestamp = otherdevices_lastupdate['Security Panel'] or 'Security Panel'
     y, m, d, H, M, S = timestamp:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
     TimeDiffsecurity = os.difftime(os.time(), os.time{year=y, month=m, day=d, hour=H, min=M, sec=S})
@@ -248,6 +266,10 @@ if (script_actif == true) then
     voir_les_logs('--- --- --- delai entre 2 mouvements des volets : '..delai_on_off/60 ..' minute(s)',debugging) 
     voir_les_logs('--- --- --- Mode '..mode_volets..' de gestion des volets',debugging)
     for k,v in pairs(les_volets) do-- On parcourt chaque volet
+        if(uservariables[v.volet] == nil) then -- Création de la variable  car elle n'existe pas
+            voir_les_logs("--- --- --- La Variable " .. v.volet .." n'existe pas --- --- --- ",debugging)
+            commandArray['OpenURL'] = url..'/json.htm?type=command&param=adduservariable&vname='..url_encode(v.volet)..'&vtype=2&vvalue='..tostring(os.date('%j')..' '..now)
+        end
         voir_les_logs('--- --- ---',debugging);
         voir_les_logs('--- --- --- Gestion du volet : '..v.volet,debugging);
         voir_les_logs('--- --- --- Position du volet : '..otherdevices[v.volet],debugging)
@@ -259,7 +281,7 @@ if (script_actif == true) then
         if (option_cmd_manu == true and otherdevices[device_cmd_closed] == value_cmd_opened) then
             voir_les_logs("--- --- --- Commande manuel d'ouverture",debugging)
             if (mode_volets == "Canicule") then
-                if (azimute_sun <= tonumber(v.azimut)-75 and azimute_sun >= tonumber(v.azimut)+70) then
+                if (azimute_sun <= tonumber(v.azimut)-75 and azimute_sun >= tonumber(v.azimut)+65) then
                     if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' ) then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                         voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
@@ -303,9 +325,22 @@ if (script_actif == true) then
             if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' ) then
                 voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                 voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
-                if (option_stop == true ) then
-                    commandArray[v.volet]=ordre_type(v.Type, "stop")
+                if option_stop == true then
+                    if uservariables[v.volet] ~= tostring(os.date('%j')..' '..now) then
+                        commandArray[#commandArray+1] = {['Variable:'..v.volet] = tostring(os.date('%j')..' '..now)}
+                        commandArray[v.volet]=ordre_type(v.Type, "stop")
+                    end
                 else
+                    commandArray[v.volet]=ordre_type(v.Type, "opening")
+                end
+            end
+        end
+        if v.piece=="chambre" then
+            if now == v.h_ouvertur+60 then
+                voir_les_logs("--- --- --- Commande automatique d'ouverture chambre",debugging)
+                if ( otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped' ) then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
                     commandArray[v.volet]=ordre_type(v.Type, "opening")
                 end
             end
@@ -315,7 +350,7 @@ if (script_actif == true) then
         -- FERMETURE des volets chambres COMMANDE automatique --
         --------------------------------------------------------
         if v.piece=="chambre" then
-            if (now == sunrise-30 and otherdevices[v.fenetre]=="Closed") then
+            if (now == sunset-10 and otherdevices[v.fenetre]=="Closed") then
                 voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
                 if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
                     voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
@@ -323,14 +358,29 @@ if (script_actif == true) then
                     commandArray[v.volet]=ordre_type(v.Type, "closing")
                 end
             end
-            if devicechanged[v.fenetre] then
-                if (now >= sunset-30 or now <= sunrise-delai_avant_leve_soleil-10) and otherdevices[v.fenetre]=="Closed" then
+            if (devicechanged[v.fenetre]) then
+                if (now >= sunset or now <= sunrise-delai_avant_leve_soleil-10) and otherdevices[v.fenetre]=="Closed" then
                     voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
                     if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                         voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
                         commandArray[v.volet]=ordre_type(v.Type, "closing")
                     end
+                elseif (now >= sunset or now <= sunrise-delai_avant_leve_soleil-10) and otherdevices[v.fenetre]=="Open" then
+                    voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
+                    if (otherdevices[v.volet]=='Closed' or otherdevices[v.volet]=='Stopped') then
+                        voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                        voir_les_logs ('--- --- --- Le volet est Ferme ==> Ouverture',debugging)
+                        commandArray[v.volet]=ordre_type(v.Type, "opening")
+                    end
+                end
+            end
+            if (now > sunset or now < sunrise) and otherdevices_temperature[sonde_ext] <= 13.5 then
+                voir_les_logs("--- --- --- Commande automatique de fermeture chambre",debugging)
+                if (otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped') then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
+                    commandArray[v.volet]=ordre_type(v.Type, "closing")
                 end
             end
         end 
@@ -350,37 +400,54 @@ if (script_actif == true) then
         --------------------------------------------------------
         -- FERMETURE des volets COMMANDE automatique si PLUIE --
         --------------------------------------------------------
-        if (otherdevices[v.fenetre]=="Open" and tonumber(otherdevices_rain_lasthour[device_pluie])>0.4) then
-            alerte_pluie = true 
-            voir_les_logs("--- --- --- Commande automatique de Fermeture car pluie",debugging)
-            if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' ) then
-                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
-                voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                commandArray[v.volet]=ordre_type(v.Type, "closing")
+        if uservariables["alerte_pluie"] ~= otherdevices_rain_lasthour[device_pluie] then
+            commandArray[#commandArray+1] = {['Variable:alerte_pluie'] = tostring(otherdevices_rain_lasthour[device_pluie])}
+        end
+        if (v.pluie == true and tonumber(otherdevices_rain_lasthour[device_pluie])>=0.3 and TimeDiff(uservariables["alerte_pluie"]) < 10*60) then
+            if otherdevices[v.fenetre]=="Open" then
+                alerte_pluie = true 
+                voir_les_logs("--- --- --- Commande automatique de Fermeture car fenetre ouverte et pluie",debugging)
+                if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' ) then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
+                    commandArray[v.volet]=ordre_type(v.Type, "closing")
+                end
+            elseif otherdevices[v.fenetre]=="Closed" and TimeDiff(v.fenetre) < 15 then
+                voir_les_logs("--- --- --- Commande automatique de Ouveture car fenetere fermé mais pluie",debugging)
+                if ( otherdevices[v.volet]=='Closed') then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
+                    commandArray[v.volet]=ordre_type(v.Type, "opening")
+                end
             end
         end
         
-        ------------------------------------------------------------
-        -- FERMETURE des volets COMMANDE automatique ALARME Armed --
-        ------------------------------------------------------------
-        if (option_alarme==true and globalvariables['Security'] == 'Armed Away' and TimeDiffsecurity < 3 and v.presence == true) then
-            voir_les_logs("--- --- --- Commande automatique de fermeture volet alarme "..v.volet ,debugging)
-            if otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' then
-                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
-                voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                commandArray[v.volet]=ordre_type(v.Type, "closing")
+        ----------------------------------------------------------------
+        ----------------- Commande OPTION ALARME ACTIVE ----------------
+        ----------------------------------------------------------------
+        if option_alarme==true then
+            ------------------------------------------------------------
+            -- FERMETURE des volets COMMANDE automatique ALARME Armed --
+            ------------------------------------------------------------
+            if (globalvariables['Security'] == 'Armed Away' and TimeDiffsecurity < 3 and v.presence == true) then
+                voir_les_logs("--- --- --- Commande automatique de fermeture volet alarme "..v.volet ,debugging)
+                if otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
+                    commandArray[v.volet]=ordre_type(v.Type, "closing")
+                end
             end
-        end
         
-        ---------------------------------------------------------------
-        -- OUVERTURE des volets COMMANDE automatique ALARME Disarmed --
-        ---------------------------------------------------------------
-        if (option_alarme==true and globalvariables['Security'] == 'Disarmed' and TimeDiffsecurity < 3 and v.presence == true) then
-            voir_les_logs("--- --- --- Commande automatique d'ouverture volet alarme"..v.volet ,debugging)
-            if otherdevices[v.volet]=='Closed' then
-                voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
-                voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
-                commandArray[v.volet]=ordre_type(v.Type, "opening")
+            ---------------------------------------------------------------
+            -- OUVERTURE des volets COMMANDE automatique ALARME Disarmed --
+            ---------------------------------------------------------------
+            if (globalvariables['Security'] == 'Disarmed' and TimeDiffsecurity < 3 and v.presence == true) then
+                voir_les_logs("--- --- --- Commande automatique d'ouverture volet alarme"..v.volet ,debugging)
+                if otherdevices[v.volet]=='Closed' then
+                    voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
+                    voir_les_logs ('--- --- --- Le volet est Fermé ==> Ouverture',debugging)
+                    commandArray[v.volet]=ordre_type(v.Type, "opening")
+                end
             end
         end
         
@@ -423,8 +490,11 @@ if (script_actif == true) then
                     if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                         voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                        if (option_stop == true ) then
-                            commandArray[v.volet]=ordre_type(v.Type, "stop")
+                        if option_stop == true then
+                            if uservariables[v.volet]~= tostring(os.date('%j')..' '..now) then
+                                commandArray[#commandArray+1] = {['Variable:'..v.volet] = tostring(os.date('%j')..' '..now)}
+                                commandArray[v.volet]=ordre_type(v.Type, "stop")
+                            end
                         else
                             commandArray[v.volet]=ordre_type(v.Type, "closing")
                         end
@@ -478,11 +548,14 @@ if (script_actif == true) then
                 ----------------------------------------------------------------------------------------
                 if ((sunset+delai_apres_couche_soleil+delai_sus_tarif) == now and (v.piece=="principale" or v.piece=="eau" or v.piece=="service") and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil',debugging)
-                    if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
+                    if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' ) and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                         voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
-                        if (option_stop == true ) then
-                            commandArray[v.volet]=ordre_type(v.Type, "stop")
+                        if option_stop == true then
+                            if uservariables[v.volet]~= tostring(os.date('%j')..' '..now) then
+                                commandArray[#commandArray+1] = {['Variable:'..v.volet] = tostring(os.date('%j')..' '..now)}
+                                commandArray[v.volet]=ordre_type(v.Type, "stop")
+                            end
                         else
                             commandArray[v.volet]=ordre_type(v.Type, "closing")
                         end
@@ -494,7 +567,7 @@ if (script_actif == true) then
                 ------------------------------------------------------------------------------------
                 if ((sunset+delai_apres_couche_soleil+delai_closed_apres_couche_soleil+delai_sus_tarif) == now and v.porte==false) then
                     voir_les_logs('--- --- --- Après le coucher du soleil + delais suplementaire',debugging)
-                    if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' )	and TimeDiff(v.volet) > delai_on_off then
+                    if ( otherdevices[v.volet]=='Open' or otherdevices[v.volet]=='Stopped' ) and TimeDiff(v.volet) > delai_on_off then
                         voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
                         voir_les_logs ('--- --- --- Le volet est Ouvert ==> Fermeture',debugging)
                         commandArray[v.volet]=ordre_type(v.Type, "closing")
@@ -536,7 +609,7 @@ if (script_actif == true) then
                 --------------------------------------------------------------------------
                 if (now > sunrise and v.azimut ~= nil) then
                     voir_les_logs('--- --- --- Ce volet bouge en fonction du soleil',debugging)
-                    if (azimute_sun >= tonumber(v.azimut)-75 and azimute_sun <= tonumber(v.azimut)+70 and elevation_sun >= 15)then
+                    if (azimute_sun >= tonumber(v.azimut)-75 and azimute_sun <= tonumber(v.azimut)+65 and elevation_sun >= 10)then
                         voir_les_logs ('--- --- --- Commande Fermeture azimut soleil',debugging)
                         if (otherdevices[v.volet]=='Open' and TimeDiff(v.volet) > delai_on_off and v.execution ~= tostring(os.date('%j')..' '..now)) then
                             voir_les_logs ('--- --- --- Le volet : "'..v.volet..'" doit être ouvert',debugging)
